@@ -1,0 +1,684 @@
+document.addEventListener("DOMContentLoaded", () => {
+
+    // ⚠️ ВСТАВЬТЕ СЮДА СВОЮ ССЫЛКУ ИЗ GOOGLE APPS SCRIPT
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwE_MWdt0qu7bSuDPIWxjXA99gt4lx70-AxYeLeXnKhh3taKmST-yMe0SJvMY9dEZ902w/exec"; 
+
+    // Тексты интерфейса
+    const uiText = {
+        ru: {
+            title: "Олимпиада по математике 2026",
+            subtitle: "Пожалуйста, зарегистрируйтесь, чтобы начать.",
+            lastName: "Фамилия:",
+            firstName: "Имя:",
+            patronymic: "Отчество:",
+            phone: "Телефон:",
+            email: "Email:",
+            grade: "Класс:",
+            optDefault: "Выберите класс",
+            regBtn: "Начать олимпиаду",
+            regBtnLoading: "Загрузка...",
+            quizHeader: "Задания для",
+            submitQuiz: "Отправить ответы",
+            
+            // НОВЫЕ НЕЙТРАЛЬНЫЕ ТЕКСТЫ:
+            resultTitle: "Тест завершен",
+            scoreLabel: "Ваш результат:",
+            correctLabel: "Правильных ответов:",
+            finalMessage: "Ваши ответы успешно сохранены. Списки прошедших во второй тур и официальные итоги будут опубликованы в нашем Telegram-канале.",
+            btnText: "📢 Перейти в канал Mezon Math",
+
+            timeOut: "Время вышло! Ваши ответы отправляются автоматически.",
+            timeLeft: "Осталось времени:",
+            errorNetwork: "Сервер перегружен. Мы пробуем соединиться снова...",
+            waitText: "Отправка ответов...",
+            classLabel: "класса",
+            rejoin: "Вы уже начали тест! Продолжаем с того же места.",
+            alreadyDone: "Вы уже сдали этот тест."
+        },
+        en: {
+            title: "Math Olympiad 2026",
+            subtitle: "Please register to start.",
+            lastName: "Last Name:",
+            firstName: "First Name:",
+            patronymic: "Middle Name (optional):",
+            phone: "Phone:",
+            email: "Email:",
+            grade: "Grade:",
+            optDefault: "Select Grade",
+            regBtn: "Start Olympiad",
+            regBtnLoading: "Loading...",
+            quizHeader: "Questions for Grade",
+            submitQuiz: "Submit Answers",
+            
+            resultTitle: "Test Completed",
+            scoreLabel: "Your Score:",
+            correctLabel: "Correct answers:",
+            finalMessage: "Your answers have been saved. The list of students who passed to the second round will be published in our Telegram channel.",
+            btnText: "📢 Go to Mezon Math Channel",
+
+            timeOut: "Time is up! Your answers are being submitted automatically.",
+            timeLeft: "Time left:",
+            errorNetwork: "Server is busy. Retrying connection...",
+            waitText: "Sending answers...",
+            classLabel: "",
+            rejoin: "You have already started! Resuming...",
+            alreadyDone: "You have already submitted this test."
+        },
+        uz: {
+            title: "Matematika Olimpiadasi 2026",
+            subtitle: "Boshlash uchun ro‘yxatdan o‘ting.",
+            lastName: "Familiya:",
+            firstName: "Ism:",
+            patronymic: "Otasining ismi:",
+            phone: "Telefon:",
+            email: "Email:",
+            grade: "Sinf:",
+            optDefault: "Sinfni tanlang",
+            regBtn: "Olimpiadani boshlash",
+            regBtnLoading: "Yuklanmoqda...",
+            quizHeader: "Sinf uchun savollar:",
+            submitQuiz: "Javoblarni yuborish",
+            
+            resultTitle: "Test yakunlandi",
+            scoreLabel: "Sizning natijangiz:",
+            correctLabel: "To‘g‘ri javoblar:",
+            finalMessage: "Javoblaringiz qabul qilindi. Ikkinchi bosqichga o‘tganlar ro‘yxati Telegram kanalimizda e’lon qilinadi.",
+            btnText: "📢 Mezon Math kanaliga o‘tish",
+
+            timeOut: "Vaqt tugadi! Javoblaringiz avtomatik yuborilmoqda.",
+            timeLeft: "Qolgan vaqt:",
+            errorNetwork: "Server band. Qayta urinmoqdamiz...",
+            waitText: "Javoblar yuborilmoqda...",
+            classLabel: "- sinf",
+            rejoin: "Siz testni boshlab bo‘lgansiz! Davom ettiramiz.",
+            alreadyDone: "Siz ushbu testni topshirib bo‘lgansiz."
+        }
+    };
+
+    // БАЗА ВОПРОСОВ (ПОЛНАЯ, 1-8 классы)
+    const questionsDB = {
+        ru: {
+            "1": [
+                { q: "У Маши было 5 конфет. Она дала 1 конфету Пете, и у них стало конфет поровну. Сколько конфет было у Пети сначала?", options: ["1", "2", "3"] },
+                { q: "На столе лежат 3 палочки. Как сделать из них 4, не ломая их?", options: ["Никак", "Добавить еще одну", "Сложить '4' (IV)"] },
+                { q: "Что можно держать, не касаясь руками?", options: ["Дыхание", "Мяч", "Чашку"] },
+                { q: "Какой месяц самый короткий (по числу дней)?", options: ["Май", "Февраль", "Сентябрь"] },
+                { q: "Вы обогнали бегуна, который был на ВТОРОМ месте. На каком месте вы теперь?", options: ["На первом", "На втором", "На третьем"] },
+                { q: "Аня, Боря и Вера живут в домах 1, 2, 3. Аня не живет в доме 1 или 2. Боря не живет в доме 1. Где живет Вера?", options: ["В доме 1", "В доме 2", "В доме 3"] },
+                { q: "Что не является деревом: Берёза, Дуб, Роза, Сосна?", options: ["Дуб", "Берёза", "Роза"] },
+                { q: "Груша дороже яблока, но дешевле банана. Что самое дорогое?", options: ["Груша", "Яблоко", "Банан"] },
+                { q: "Лестница состоит из 9 ступенек. На какой ступеньке стоит мальчик, если он находится посередине?", options: ["4", "5", "6"] }
+            ],
+            "2": [
+                { q: "Врач дал больному 3 таблетки, сказав принять их каждые полчаса. На сколько времени хватит таблеток?", options: ["1.5 часа", "1 час", "30 минут"] },
+                { q: "Сколько всего двузначных чисел?", options: ["99", "89", "90"] },
+                { q: "У 7 гномов 3 домика. Могут ли они все разместиться так, чтобы в каждом домике было не больше 2 гномов?", options: ["Да", "Нет", "Только если 1 гном уйдет"] },
+                { q: "Сумма двух чисел равна 15, а одно из них на 3 больше другого. Что это за числа?", options: ["7 и 8", "6 и 9", "5 и 10"] },
+                { q: "Кирпич весит 1 кг и еще полкирпича. Сколько весит один кирпич?", options: ["1.5 кг", "2 кг", "3 кг"] },
+                { q: "Сколько раз цифра 9 встречается в числах от 1 до 100?", options: ["19", "20", "21"] },
+                { q: "У Ани, Бэлы и Веры есть красный, синий и зеленый шар. У Ани не красный. У Веры не красный и не синий. Какой шар у Бэлы?", options: ["Красный", "Синий", "Зеленый"] },
+                { q: "Периметр квадрата 12 см. Чему равна его площадь?", options: ["9 см²", "12 см²", "16 см²"] },
+                { q: "40 мышей съели 20 кг сыра. Сколько мышей съедят 10 кг сыра?", options: ["20", "10", "40"] }
+            ],
+            "3": [
+                { q: "Сколькими способами можно расставить на полке 3 разные книги?", options: ["3", "5", "6"] },
+                { q: "В комнате 4 угла. В каждом углу сидит кошка. Напротив каждой кошки — 3 кошки. Сколько всего кошек в комнате?", options: ["16", "12", "4"] },
+                { q: "Сумма цифр двузначного числа равна 12. Если цифры переставить, число уменьшится на 18. Найдите это число.", options: ["93", "84", "75"] },
+                { q: "Арбуз на 3 кг тяжелее дыни, а 2 арбуза весят как 3 дыни. Сколько весит арбуз?", options: ["6 кг", "9 кг", "12 кг"] },
+                { q: "Вставьте '+' или '-' между цифрами 1 2 3 4 5 так, чтобы получилось 3.", options: ["1+2+3-4-5", "12-3-4-5", "1+23-4-5", "1-2+3-4+5"] },
+                { q: "Внуку столько же месяцев, сколько дедушке лет. Вместе им 65 лет. Сколько лет дедушке?", options: ["60", "62", "64"] },
+                { q: "Половина от четверти числа. Какая это часть?", options: ["1/2", "1/6", "1/8"] },
+                { q: "3 курицы за 3 дня несут 3 яйца. Сколько яиц снесут 6 куриц за 6 дней?", options: ["6", "12", "18"] },
+                { q: "Сколько диагоналей можно провести в пятиугольнике?", options: ["3", "5", "8"] }
+            ],
+            "4": [
+                { q: "Из двух городов навстречу едут 2 велосипедиста. Скорость одного 15 км/ч, другого 20 км/ч. Расстояние 70 км. Через сколько часов они встретятся?", options: ["3 часа", "2.5 часа", "2 часа"] },
+                { q: "Найдите число, 1/3 которого равна 1/4 от 24.", options: ["18", "24", "12"] },
+                { q: "В классе 30 учеников. 18 - плавают, 15 - играют в шахматы. 5 не занимаются ничем. Сколько учеников занимаются и тем, и тем?", options: ["8", "10", "3"] },
+                { q: "3 курицы за 3 дня несут 3 яйца. Сколько яиц снесут 12 куриц за 12 дней?", options: ["12", "48", "144"] },
+                { q: "Найдите периметр прямоугольника, если его площадь 36 см², а одна из сторон в 4 раза больше другой.", options: ["24 см", "30 см", "40 см"] },
+                { q: "Если 2*x + 5 = 17, чему равно 2*x - 5?", options: ["12", "7", "5"] },
+                { q: "Палиндром – это число, которое читается одинаково (121). Сколько палиндромов между 100 и 200?", options: ["9", "10", "11"] },
+                { q: "В 12:00 часовая и минутная стрелки совпали. Когда они совпадут в следующий раз (примерно)?", options: ["13:00", "13:05", "13:10"] },
+                { q: "У 7 гномов 3 домика. Могут ли они все разместиться так, чтобы в каждом домике было не больше 2 гномов?", options: ["Да", "Нет"] }
+            ],
+            "5": [
+                { q: "Найдите 20% от 1/4.", options: ["1/5", "1/10", "1/20"] },
+                { q: "Половина от 1.5% от 1000. Какое это число?", options: ["75", "15", "7.5"] },
+                { q: "Решите уравнение: 0.1 * (x - 10) = 1", options: ["11", "20", "100"] },
+                { q: "Что больше: 5/6 или 6/7?", options: ["5/6", "6/7", "Равны"] },
+                { q: "Средний возраст 11 игроков команды 22 года. Один игрок ушел, средний возраст оставшихся стал 21. Сколько лет ушедшему игроку?", options: ["22", "31", "32"] },
+                { q: "Цена товара сначала выросла на 10%, затем снизилась на 10%. Как изменилась цена?", options: ["Не изменилась", "Уменьшилась на 1%", "Увеличилась на 1%"] },
+                { q: "Сколько нулей на конце числа, равного произведению 1*2*3*...*10?", options: ["1", "2", "3"] },
+                { q: "Найдите наименьшее общее кратное (НОК) чисел 12 и 15.", options: ["3", "60", "180"] },
+                { q: "Расшифруйте: А + А + Б = 14, А + Б + Б = 16. Чему равно А?", options: ["4", "5", "6"] }
+            ],
+            "6": [
+                { q: "Решите уравнение: |x - 3| = 5", options: ["Только 8", "Только -2", "8 и -2"] },
+                { q: "Длина окружности 12π. Чему равна площадь этого круга?", options: ["36π", "72π", "144π"] },
+                { q: "Карта имеет масштаб 1:50000. Каково расстояние на местности, если на карте оно 4 см?", options: ["2 км", "20 км", "200 м"] },
+                { q: "Упростите: (2a)³ * a⁻²", options: ["6a", "8a", "8a⁵"] },
+                { q: "Какова последняя цифра числа 2¹⁰⁰?", options: ["0", "2", "4", "6"] },
+                { q: "В треугольнике ABC угол A = 40°, угол B = 60°. Найдите внешний угол при вершине C.", options: ["80°", "100°", "120°"] },
+                { q: "Что меньше: -1/2 или -1/3?", options: ["-1/2", "-1/3", "Равны"] },
+                { q: "Если a/b = 2/3 и b/c = 3/4, чему равно a/c?", options: ["2/4 (1/2)", "6/12 (1/2)", "8/9"] },
+                { q: "Сплав содержит 10% меди. Сколько меди в 50 кг сплава?", options: ["5 кг", "10 кг", "0.5 кг"] }
+            ],
+            "7": [
+                { q: "Упростите выражение: (a - b)(a + b) + b²", options: ["a² + 2b²", "a²", "a² - 2b²"] },
+                { q: "Графики y = 2x + 5 и y = 11 - x пересекаются. Найдите 'x' в точке пересечения.", options: ["1", "2", "3"] },
+                { q: "Разложите на множители: x² - 5x + 6", options: ["(x-2)(x-3)", "(x-1)(x-6)", "(x+2)(x+3)"] },
+                { q: "В равнобедренном треугольнике угол при вершине равен 40°. Чему равен угол при основании?", options: ["40°", "50°", "70°"] },
+                { q: "Медиана, проведенная к гипотенузе прямоугольного треугольника, равна...", options: ["...половине гипотенузы", "...половине катета", "...высоте"] },
+                { q: "Что такое 4⁻¹ + 2⁻¹ ?", options: ["6⁻¹ (1/6)", "3/4", "1/8"] },
+                { q: "Найдите значение (x + y)², если x² + y² = 10 и xy = 3.", options: ["13", "16", "19"] },
+                { q: "Сумма двух чисел 10, их произведение 21. Найдите эти числа.", options: ["5 и 5", "6 и 4", "3 и 7"] },
+                { q: "Решите неравенство: 3x - 1 > 8", options: ["x < 3", "x > 3", "x = 3"] }
+            ],
+            "8": [
+                { q: "Упростите: (√5 - 1)(√5 + 1)", options: ["4", "5", "6"] },
+                { q: "Решите уравнение: x² + 4x - 5 = 0. Найдите сумму корней.", options: ["-4", "4", "-5"] },
+                { q: "Площадь ромба 40. Одна из диагоналей 8. Найдите вторую диагональ.", options: ["5", "10", "12"] },
+                { q: "Что из этого НЕ является графиком функции?", options: ["Прямая", "Окружность", "Парабола"] },
+                { q: "Упростите: (a²)³ / a⁴", options: ["a", "a²", "a³"] },
+                { q: "sin(30°) + cos(60°)?", options: ["1", "√3/2", "0.5"] },
+                { q: "В треугольник вписана окружность. Расстояние от центра до стороны - это...", options: ["Медиана", "Биссектриса", "Радиус"] },
+                { q: "В арифметической прогрессии a₁ = 3, d = 4. Найдите a₅.", options: ["19", "23", "27"] },
+                { q: "Решите: x² = 49", options: ["7", "-7", "7 and -7"] }
+            ]
+        },
+        en: {
+            "1": [
+                { q: "Masha had 5 candies. She gave 1 candy to Petya, and they had an equal number. How many candies did Petya have initially?", options: ["1", "2", "3"] },
+                { q: "There are 3 sticks on the table. How can you make 4 out of them without breaking them?", options: ["Impossible", "Add one more", "Make '4' (IV)"] },
+                { q: "What can you hold without touching it with your hands?", options: ["Breath", "Ball", "Cup"] },
+                { q: "Which month is the shortest (by number of days)?", options: ["May", "February", "September"] },
+                { q: "You overtook the runner who was in SECOND place. What place are you in now?", options: ["First", "Second", "Third"] },
+                { q: "Anya, Borya, and Vera live in houses 1, 2, 3. Anya lives in neither house 1 nor house 2. Borya does not live in house 1. Where does Vera live?", options: ["House 1", "House 2", "House 3"] },
+                { q: "Which is NOT a tree: Birch, Oak, Rose, Pine?", options: ["Oak", "Birch", "Rose"] },
+                { q: "A pear is more expensive than an apple but cheaper than a banana. What is the most expensive?", options: ["Pear", "Apple", "Banana"] },
+                { q: "A ladder has 9 rungs. On which rung is a boy standing if he is in the middle?", options: ["4", "5", "6"] }
+            ],
+            "2": [
+                { q: "A doctor gave a patient 3 pills, telling him to take one every half hour. How long will the pills last?", options: ["1.5 hours", "1 hour", "30 minutes"] },
+                { q: "How many two-digit numbers are there in total?", options: ["99", "89", "90"] },
+                { q: "7 dwarfs have 3 houses. Can they all fit so that there are no more than 2 dwarfs in each house?", options: ["Yes", "No", "Only if 1 leaves"] },
+                { q: "The sum of two numbers is 15, and one is 3 more than the other. What are the numbers?", options: ["7 and 8", "6 and 9", "5 and 10"] },
+                { q: "A brick weighs 1 kg plus half a brick. How much does one brick weigh?", options: ["1.5 kg", "2 kg", "3 kg"] },
+                { q: "How many times does the digit 9 appear in numbers from 1 to 100?", options: ["19", "20", "21"] },
+                { q: "Anya, Bela, and Vera each have a red, blue, and green ball. Anya's is not red. Vera's is not red and not blue. Which ball does Bela have?", options: ["Red", "Blue", "Green"] },
+                { q: "The perimeter of a square is 12 cm. What is its area?", options: ["9 cm²", "12 cm²", "16 cm²"] },
+                { q: "40 mice ate 20 kg of cheese. How many mice will eat 10 kg of cheese?", options: ["20", "10", "40"] }
+            ],
+            "3": [
+                { q: "In how many ways can 3 different books be arranged on a shelf?", options: ["3", "5", "6"] },
+                { q: "There are 4 corners in a room. A cat sits in each corner. Opposite each cat are 3 cats. How many cats are in the room?", options: ["16", "12", "4"] },
+                { q: "The sum of the digits of a two-digit number is 12. If the digits are reversed, the number decreases by 18. Find the number.", options: ["93", "84", "75"] },
+                { q: "A watermelon is 3 kg heavier than a melon, and 2 watermelons weigh as much as 3 melons. How much does a watermelon weigh?", options: ["6 kg", "9 kg", "12 kg"] },
+                { q: "Insert '+' or '-' between the digits 1 2 3 4 5 to get 3.", options: ["1+2+3-4-5", "12-3-4-5", "1+23-4-5", "1-2+3-4+5"] },
+                { q: "A grandson is as many months old as his grandfather is years old. Together they are 65 years old. How old is the grandfather?", options: ["60", "62", "64"] },
+                { q: "Half of a quarter of a number. What fraction is this?", options: ["1/2", "1/6", "1/8"] },
+                { q: "3 hens lay 3 eggs in 3 days. How many eggs will 6 hens lay in 6 days?", options: ["6", "12", "18"] },
+                { q: "How many diagonals can be drawn in a pentagon?", options: ["3", "5", "8"] }
+            ],
+            "4": [
+                { q: "Two cyclists are riding towards each other from two cities. One's speed is 15 km/h, the other's is 20 km/h. The distance is 70 km. In how many hours will they meet?", options: ["3 hours", "2.5 hours", "2 hours"] },
+                { q: "Find a number, 1/3 of which is equal to 1/4 of 24.", options: ["18", "24", "12"] },
+                { q: "There are 30 students in a class. 18 swim, 15 play chess. 5 do neither. How many students do both?", options: ["8", "10", "3"] },
+                { q: "3 hens lay 3 eggs in 3 days. How many eggs will 12 hens lay in 12 days?", options: ["12", "48", "144"] },
+                { q: "Find the perimeter of a rectangle if its area is 36 cm² and one side is 4 times larger than the other.", options: ["24 cm", "30 cm", "40 cm"] },
+                { q: "If 2*x + 5 = 17, what is 2*x - 5 equal to?", options: ["12", "7", "5"] },
+                { q: "A palindrome is a number that reads the same backwards (121). How many palindromes are there between 100 and 200?", options: ["9", "10", "11"] },
+                { q: "At 12:00, the hour and minute hands coincided. When will they coincide next (approximately)?", options: ["13:00", "13:05", "13:10"] },
+                { q: "7 dwarfs have 3 houses. Can they all fit so that there are no more than 2 dwarfs in each house?", options: ["Yes", "No"] }
+            ],
+            "5": [
+                { q: "Find 20% of 1/4.", options: ["1/5", "1/10", "1/20"] },
+                { q: "Half of 1.5% of 1000. What number is this?", options: ["75", "15", "7.5"] },
+                { q: "Solve the equation: 0.1 * (x - 10) = 1", options: ["11", "20", "100"] },
+                { q: "Which is greater: 5/6 or 6/7?", options: ["5/6", "6/7", "Equal"] },
+                { q: "The average age of 11 team players is 22 years. One player left, the average age of the rest became 21. How old is the player who left?", options: ["22", "31", "32"] },
+                { q: "The price of a product first increased by 10%, then decreased by 10%. How did the price change?", options: ["No change", "Decreased by 1%", "Increased by 1%"] },
+                { q: "How many zeros are at the end of the number equal to the product 1*2*3*...*10?", options: ["1", "2", "3"] },
+                { q: "Find the Least Common Multiple (LCM) of 12 and 15.", options: ["3", "60", "180"] },
+                { q: "Decipher: A + A + B = 14, A + B + B = 16. What is A?", options: ["4", "5", "6"] }
+            ],
+            "6": [
+                { q: "Solve the equation: |x - 3| = 5", options: ["Only 8", "Only -2", "8 and -2"] },
+                { q: "The circumference is 12π. What is the area of this circle?", options: ["36π", "72π", "144π"] },
+                { q: "A map has a scale of 1:50000. What is the actual distance if it is 4 cm on the map?", options: ["2 km", "20 km", "200 m"] },
+                { q: "Simplify: (2a)³ * a⁻²", options: ["6a", "8a", "8a⁵"] },
+                { q: "What is the last digit of 2¹⁰⁰?", options: ["0", "2", "4", "6"] },
+                { q: "In triangle ABC, angle A = 40°, angle B = 60°. Find the exterior angle at vertex C.", options: ["80°", "100°", "120°"] },
+                { q: "Which is smaller: -1/2 or -1/3?", options: ["-1/2", "-1/3", "Equal"] },
+                { q: "If a/b = 2/3 and b/c = 3/4, what is a/c?", options: ["2/4 (1/2)", "6/12 (1/2)", "8/9"] },
+                { q: "An alloy contains 10% copper. How much copper is in 50 kg of the alloy?", options: ["5 kg", "10 kg", "0.5 kg"] }
+            ],
+            "7": [
+                { q: "Simplify the expression: (a - b)(a + b) + b²", options: ["a² + 2b²", "a²", "a² - 2b²"] },
+                { q: "The graphs y = 2x + 5 and y = 11 - x intersect. Find 'x' at the intersection point.", options: ["1", "2", "3"] },
+                { q: "Factorize: x² - 5x + 6", options: ["(x-2)(x-3)", "(x-1)(x-6)", "(x+2)(x+3)"] },
+                { q: "In an isosceles triangle, the vertex angle is 40°. What is the base angle?", options: ["40°", "50°", "70°"] },
+                { q: "The median drawn to the hypotenuse of a right-angled triangle is equal to...", options: ["...half the hypotenuse", "...half the leg", "...the altitude"] },
+                { q: "What is 4⁻¹ + 2⁻¹ ?", options: ["6⁻¹ (1/6)", "3/4", "1/8"] },
+                { q: "Find the value of (x + y)², if x² + y² = 10 and xy = 3.", options: ["13", "16", "19"] },
+                { q: "The sum of two numbers is 10, their product is 21. Find these numbers.", options: ["5 and 5", "6 and 4", "3 and 7"] },
+                { q: "Solve the inequality: 3x - 1 > 8", options: ["x < 3", "x > 3", "x = 3"] }
+            ],
+            "8": [
+                { q: "Simplify: (√5 - 1)(√5 + 1)", options: ["4", "5", "6"] },
+                { q: "Solve the equation: x² + 4x - 5 = 0. Find the sum of the roots.", options: ["-4", "4", "-5"] },
+                { q: "The area of a rhombus is 40. One diagonal is 8. Find the second diagonal.", options: ["5", "10", "12"] },
+                { q: "Which of these is NOT a function graph?", options: ["Line", "Circle", "Parabola"] },
+                { q: "Simplify: (a²)³ / a⁴", options: ["a", "a²", "a³"] },
+                { q: "sin(30°) + cos(60°)?", options: ["1", "√3/2", "0.5"] },
+                { q: "A circle is inscribed in a triangle. The distance from the center to a side is the...", options: ["Median", "Bisector", "Radius"] },
+                { q: "In an arithmetic progression a₁ = 3, d = 4. Find a₅.", options: ["19", "23", "27"] },
+                { q: "Solve: x² = 49", options: ["7", "-7", "7 and -7"] }
+            ]
+        },
+        uz: {
+            "1": [
+                { q: "Mashada 5 ta konfet bor edi. U 1 ta konfetni Petaga berdi va ularning konfetlari soni teng bo‘ldi. Avval Petada nechta konfet bo‘lgan?", options: ["1", "2", "3"] },
+                { q: "Stol ustida 3 ta tayoqcha turibdi. Ularni sindirmasdan qanday qilib 4 ta qilish mumkin?", options: ["Hech qanday", "Yana bittasini qo'shish", "'4' (IV) qilib terish"] },
+                { q: "Qo‘l bilan ushlamasdan nimani ushlab turish mumkin?", options: ["Nafasni", "To'pni", "Piyolani"] },
+                { q: "Eng qisqa (kunlar soni bo‘yicha) oy qaysi?", options: ["May", "Fevral", "Sentabr"] },
+                { q: "Siz IKKINCHI o‘rinda ketayotgan yuguruvchidan o‘zib ketdingiz. Endi siz nechanchi o‘rindasiz?", options: ["Birinchi o'rinda", "Ikkinchi o'rinda", "Uchinchi o'rinda"] },
+                { q: "Anora, Baxrom va Vasila 1, 2, 3-uylarda yashaydi. Anora 1 yoki 2-uyda yashamaydi. Baxrom 1-uyda yashamaydi. Vasila qayerda yashaydi?", options: ["1-uyda", "2-uyda", "3-uyda"] },
+                { q: "Qaysi biri daraxt emas: Qayin, Eman, Atirgul, Qarag‘ay?", options: ["Eman", "Qayin", "Atirgul"] },
+                { q: "Nok olmadan qimmat, lekin banandan arzon. Eng qimmati nima?", options: ["Nok", "Olma", "Banan"] },
+                { q: "Narvon 9 ta zinapoyadan iborat. Agar bola o‘rtada turgan bo‘lsa, u nechanchi zinapoyada?", options: ["4", "5", "6"] }
+            ],
+            "2": [
+                { q: "Shifokor bemorga har yarim soatda ichish uchun 3 ta tabletka berdi. Tabletkalar necha soatga yetadi?", options: ["1.5 soat", "1 soat", "30 daqiqa"] },
+                { q: "Hammasi bo‘lib nechta ikki xonali son bor?", options: ["99", "89", "90"] },
+                { q: "7 ta gnomning 3 ta uychasi bor. Ular hammasi har bir uychada 2 tadan ortiq gnom bo‘lmasligi uchun joylasha oladimi?", options: ["Ha", "Yo‘q", "Faqat 1 ta gnom ketsa"] },
+                { q: "Ikkita sonning yig‘indisi 15 ga teng, ulardan biri ikkinchisidan 3 ga ko‘p. Bu qanday sonlar?", options: ["7 va 8", "6 va 9", "5 va 10"] },
+                { q: "G‘isht 1 kg va yana yarim g‘isht og‘irlikda. Bitta g‘ishtning og‘irligi qancha?", options: ["1.5 kg", "2 kg", "3 kg"] },
+                { q: "1 dan 100 gacha bo‘lgan sonlarda 9 raqami necha marta uchraydi?", options: ["19", "20", "21"] },
+                { q: "Anora, Malika va Vasila qizil, ko‘k va yashil shar bor. Anora qizil emas. Vasila qizil ham, ko‘k ham emas. Malikada qaysi shar?", options: ["Qizil", "Ko‘k", "Yashil"] },
+                { q: "Kvadratning perimetri 12 sm. Uning yuzasi (maydoni) necha ga teng?", options: ["9 sm²", "12 sm²", "16 sm²"] },
+                { q: "40 ta sichqon 20 kg pishloq yedi. 10 kg pishloqni nechta sichqon yeydi?", options: ["20", "10", "40"] }
+            ],
+            "3": [
+                { q: "3 xil kitobni javonda necha xil usulda joylashtirish mumkin?", options: ["3", "5", "6"] },
+                { q: "Xonada 4 ta burchak bor. Har bir burchakda bittadan mushuk o‘tiribdi. Har bir mushukning ro‘parasida 3 ta mushuk bor. Xonada jami nechta mushuk bor?", options: ["16", "12", "4"] },
+                { q: "Ikki xonali sonning raqamlari yig‘indisi 12 ga teng. Agar raqamlarining o‘rni almashtirilsa, son 18 ga kamayadi. Bu sonni toping.", options: ["93", "84", "75"] },
+                { q: "Tarvuz qovundan 3 kg og‘ir, 2 ta tarvuzning og‘irligi esa 3 ta qovunning og‘irligiga teng. Tarvuzning og‘irligi qancha?", options: ["6 kg", "9 kg", "12 kg"] },
+                { q: "1 2 3 4 5 raqamlari orasiga '+' yoki '-' ishorasini shunday qo‘yingki, natijada 3 hosil bo‘lsin.", options: ["1+2+3-4-5", "12-3-4-5", "1-2+3-4+5"] },
+                { q: "Nabiraning oylar soni boboning yillar soniga teng. Ularning yoshi jami 65 yil. Boboning yoshi nechada?", options: ["60", "62", "64"] },
+                { q: "Sonning to‘rtdan bir qismining yarmi. Bu qanday qism?", options: ["1/2", "1/6", "1/8"] },
+                { q: "3 ta tovuq 3 kunda 3 ta tuxum qo'yadi. 6 ta tovuq 6 kunda nechta tuxum qo'yadi?", options: ["6", "12", "18"] },
+                { q: "Beshburchakda nechta diagonal o‘tkazish mumkin?", options: ["3", "5", "8"] }
+            ],
+            "4": [
+                { q: "Ikki shahardan bir-biriga qarama-qarshi 2 nafar velosipedchi yo‘lga chiqdi. Birining tezligi 15 km/soat, ikkinchisiniki 20 km/soat. Oradagi masofa 70 km. Ular necha soatdan keyin uchrashadi?", options: ["3 soat", "2.5 soat", "2 soat"] },
+                { q: "1/3 qismi 24 sonining 1/4 qismiga teng boʻlgan sonni toping.", options: ["18", "24", "12"] },
+                { q: "Sinfda 30 nafar o‘quvchi bor. 18 nafari suzish bilan, 15 nafari shaxmat bilan shug‘ullanadi. 5 nafari esa hech narsa bilan shug‘ullanmaydi. Nechta o‘quvchi ham suzish, ham shaxmat bilan shug‘ullanadi?", options: ["8", "10", "3"] },
+                { q: "3 ta tovuq 3 kunda 3 ta tuxum qo'yadi. 12 ta tovuq 12 kunda nechta tuxum qo'yadi?", options: ["12", "48", "144"] },
+                { q: "Maydoni 36 sm² bo‘lgan to‘g‘ri to‘rtburchakning perimetrini toping, agar uning bir tomoni ikkinchisidan 4 marta katta bo‘lsa.", options: ["24sm", "30sm", "40sm"] },
+                { q: "Agar 2x + 5 = 17 bo‘lsa, 2x - 5 nimaga teng?", options: ["12", "7", "5"] },
+                { q: "Palindrom – bu ikki tomondan (masalan, 121) bir xil o‘qiladigan son. 100 dan 200 gacha bo‘lgan oraliqda nechta palindrom bor?", options: ["9", "10", "11"] },
+                { q: "Soat 12:00 da soat va minut strelkalari ustma-ust tushdi. Ular keyingi safar qachon (taxminan) ustma-ust tushadi?", options: ["13:00", "13:05", "13:10"] },
+                { q: "7 ta gnomning 3 ta uychasi bor. Ular hammasi har bir uychada 2 tadan ortiq gnom bo‘lmasligi uchun joylasha oladimi?", options: ["Ha", "Yo‘q"] }
+            ],
+            "5": [
+                { q: "1/4 ning 20% ini toping.", options: ["1/5", "1/10", "1/20"] },
+                { q: "1000 ning 1.5% qismining yarmi. Bu qaysi son?", options: ["75", "15", "7.5"] },
+                { q: "Tenglamani yeching: 0.1 * (x - 10) = 1", options: ["11", "20", "100"] },
+                { q: "Qaysi biri katta: 5/6 yoki 6/7?", options: ["5/6", "6/7", "Teng"] },
+                { q: "Jamoadagi 11 o‘yinchi yoshining o‘rtachasi 22 yosh. Bir o‘yinchi ketgach, qolganlarning o‘rtacha yoshi 21 bo‘ldi. Ketgan o‘yinchi necha yoshda bo‘lgan?", options: ["22", "31", "32"] },
+                { q: "Mahsulot narxi avval 10% ga oshdi, so‘ngra 10% ga tushdi. Narx qanday o‘zgardi?", options: ["O‘zgarmadi", "1% ga kamaydi", "1% ga oshdi"] },
+                { q: "1*2*3*...*10 ko‘paytmasiga teng bo‘lgan sonning oxirida nechta nol bor?", options: ["1", "2", "3"] },
+                { q: "12 va 15 sonlarining eng kichik umumiy karralisini (EKUK) toping.", options: ["3", "60", "180"] },
+                { q: "Yechimini toping: A + A + B = 14, A + B + B = 16. A nimaga teng?", options: ["4", "5", "6"] }
+            ],
+            "6": [
+                { q: "Tenglamani yeching: |x - 3| = 5", options: ["Faqat 8", "Faqat -2", "8 va -2"] },
+                { q: "Aylana uzunligi 12π. Bu doiraning yuzasi (maydoni) nimaga teng?", options: ["36π", "72π", "144π"] },
+                { q: "Xarita masshtabi 1:50000. Agar xaritada 4 sm bo‘lsa, joydagi masofa qancha?", options: ["2 km", "20 km", "200 m"] },
+                { q: "Soddalashtiring: (2a)³ * a⁻²", options: ["6a", "8a", "8a⁵"] },
+                { q: "2¹⁰⁰ sonining oxirgi raqami qaysi?", options: ["0", "2", "4", "6"] },
+                { q: "ABC uchburchakda A = 40°, burchak B = 60°. C uchidagi tashqi burchakni toping.", options: ["80˚", "100˚", "120˚"] },
+                { q: "Qaysi biri kichik: -1/2 yoki -1/3?", options: ["-1/2", "-1/3", "Teng"] },
+                { q: "Agar a/b = 2/3 va b/c = 3/4 bo‘lsa, a/c nimaga teng?", options: ["2/4 (1/2)", "6/12 (1/2)", "8/9"] },
+                { q: "Qotishma 10% misni o‘z ichiga oladi. 50 kg qotishmada qancha mis bor?", options: ["5 kg", "10 kg", "0.5 kg"] }
+            ],
+            "7": [
+                { q: "Ifodani soddalashtiring: (a - b)(a + b) + b²", options: ["a² + 2b²", "a²", "a² - 2b²"] },
+                { q: "y = 2x + 5 va y = 11 - x grafiklari kesishadi. Kesishish nuqtasida 'x' ni toping.", options: ["1", "2", "3"] },
+                { q: "Ko‘paytuvchilarga ajrating: x² - 5x + 6", options: ["(x-2)(x-3)", "(x-1)(x-6)", "(x+2)(x+3)"] },
+                { q: "Teng yonli uchburchakda uchdagi burchak 40° ga teng. Asosdagi burchak nimaga teng?", options: ["40˚", "50˚", "70˚"] },
+                { q: "To‘g‘ri burchakli uchburchakning gipotenuzasiga tushirilgan mediana...", options: ["...gipotenuzaning yarmiga teng", "...katetning yarmiga teng", "...balandlikka teng"] },
+                { q: "4⁻¹ + 2⁻¹ nimaga teng?", options: ["6⁻¹ (1/6)", "3/4", "1/8"] },
+                { q: "Agar x² + y² = 10 va xy = 3 bo‘lsa, (x + y)² ning qiymatini toping.", options: ["13", "16", "19"] },
+                { q: "Ikki sonning yig‘indisi 10, ularning ko‘paytmasi 21. Bu sonlarni toping.", options: ["5 va 5", "6 va 4", "3 va 7"] },
+                { q: "Tengsizlikni yeching: 3x - 1 > 8", options: ["x < 3", "x > 3", "x = 3"] }
+            ],
+            "8": [
+                { q: "Soddalashtiring: (√5 - 1)(√5 + 1)", options: ["4", "5", "6"] },
+                { q: "Tenglamani yeching: x² + 4x - 5 = 0. Ildizlari yig‘indisini toping.", options: ["-4", "4", "-5"] },
+                { q: "Rombning yuzasi 40. Diagonalidan biri 8. Ikkinchi diagonalini toping.", options: ["5", "10", "12"] },
+                { q: "Quyidagilardan qaysi biri funksiya grafigi EMAS?", options: ["To‘g‘ri chiziq", "Aylana", "Parabola"] },
+                { q: "Soddalashtiring: (a²)³ / a⁴", options: ["a", "a²", "a³"] },
+                { q: "sin(30°) + cos(60°) nimaga teng?", options: ["1", "√3/2", "0.5"] },
+                { q: "Uchburchakka aylana ichki chizilgan. Markazdan tomongacha bo‘lgan masofa - bu...", options: ["Mediana", "Bissektrisa", "Radius"] },
+                { q: "Arifmetik progressiyada a₁ = 3, d = 4. a₅ ni toping.", options: ["19", "23", "27"] },
+                { q: "Yeching: x² = 49", options: ["7", "-7", "7 va -7"] }
+            ]
+        }
+    };
+    
+    // Элементы DOM
+    const regForm = document.getElementById("registration-form");
+    const quizForm = document.getElementById("quiz-form");
+    const regSection = document.getElementById("registration-section");
+    const quizSection = document.getElementById("quiz-section");
+    const resultSection = document.getElementById("result-section");
+    const quizHeader = document.getElementById("quiz-header");
+    const resultMessage = document.getElementById("result-message");
+    const submitButton = document.getElementById("reg-submit-btn");
+    const quizSubmitButton = document.getElementById("quiz-submit-btn");
+    const timerDisplay = document.getElementById("timer-display");
+    const emailGroup = document.getElementById("email-group");
+    const emailInput = document.getElementById("email");
+
+    const btnRu = document.getElementById("btn-ru");
+    const btnEn = document.getElementById("btn-en");
+    const btnUz = document.getElementById("btn-uz"); 
+
+    let timerInterval; 
+    let quizEndTime;    
+    let currentParticipant = {}; 
+    let selectedGrade = ""; 
+    let currentLang = "ru";
+
+    function setLanguage(lang) {
+        currentLang = lang;
+        const texts = uiText[lang];
+
+        [btnRu, btnEn, btnUz].forEach(btn => btn.classList.remove('active-lang'));
+        if (lang === 'ru') btnRu.classList.add('active-lang');
+        if (lang === 'en') btnEn.classList.add('active-lang');
+        if (lang === 'uz') btnUz.classList.add('active-lang');
+
+        emailInput.required = true;
+
+        document.getElementById('main-title').textContent = texts.title;
+        document.getElementById('sub-title').textContent = texts.subtitle;
+        document.getElementById('label-lastname').textContent = texts.lastName;
+        document.getElementById('label-firstname').textContent = texts.firstName;
+        document.getElementById('label-patronymic').textContent = texts.patronymic;
+        document.getElementById('label-phone').textContent = texts.phone;
+        document.getElementById('label-email').textContent = texts.email;
+        document.getElementById('label-grade').textContent = texts.grade;
+        document.getElementById('opt-default').textContent = texts.optDefault;
+        document.getElementById('reg-submit-btn').textContent = texts.regBtn;
+        document.getElementById('quiz-submit-btn').textContent = texts.submitQuiz;
+        document.getElementById('result-title').textContent = texts.resultTitle;
+    }
+
+    btnRu.addEventListener('click', () => setLanguage('ru'));
+    btnEn.addEventListener('click', () => setLanguage('en'));
+    btnUz.addEventListener('click', () => setLanguage('uz')); 
+
+    emailGroup.classList.remove('hidden');
+
+    // === ФУНКЦИЯ ОТПРАВКИ С АВТО-ПОВТОРОМ (ДЛЯ 700 ЧЕЛОВЕК) ===
+    async function sendDataWithRetry(data, retries = 4) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                // Если запрос висит дольше 15 сек — сбрасываем
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                const result = await response.json();
+
+                if (result.status === "error" && result.message === "Server busy") {
+                    throw new Error("Server busy"); 
+                }
+                
+                return result; 
+            } catch (err) {
+                console.warn(`Попытка ${i + 1} не удалась: ${err.message}`);
+                
+                if (i === retries - 1) throw err;
+                
+                const waitTime = 1500 + Math.random() * 1000;
+                await new Promise(res => setTimeout(res, waitTime));
+            }
+        }
+    }
+
+    // === РЕГИСТРАЦИЯ ===
+    regForm.addEventListener("submit", (e) => {
+        e.preventDefault(); 
+        
+        submitButton.disabled = true;
+        submitButton.textContent = uiText[currentLang].regBtnLoading;
+
+        currentParticipant = {
+            lastName: document.getElementById("lastName").value,
+            firstName: document.getElementById("firstName").value,
+            patronymic: document.getElementById("patronymic").value,
+            phone: document.getElementById("phone").value,
+            grade: document.getElementById("grade").value,
+            email: document.getElementById("email").value,
+            language: currentLang
+        };
+        selectedGrade = currentParticipant.grade;
+
+        // ПРОВЕРКА НАЛИЧИЯ ВОПРОСОВ
+        if (!questionsDB[currentLang][selectedGrade]) {
+            alert("Вопросы для этого класса еще не загружены.");
+            submitButton.disabled = false;
+            submitButton.textContent = uiText[currentLang].regBtn;
+            return;
+        }
+
+        sendDataWithRetry({
+            type: 'start_session',
+            phone: currentParticipant.phone
+        })
+        .then(serverData => {
+            if (serverData.status === "error") {
+                if (serverData.message === "ALREADY_SUBMITTED") {
+                    alert(uiText[currentLang].alreadyDone);
+                } else {
+                    alert("Error: " + serverData.message);
+                }
+                submitButton.disabled = false;
+                submitButton.textContent = uiText[currentLang].regBtn;
+                return;
+            }
+
+            const remainingSeconds = serverData.timeLeft;
+
+            if (remainingSeconds <= 0) {
+                alert(uiText[currentLang].timeOut);
+                return;
+            }
+
+            if (remainingSeconds < 90 * 60) {
+                alert(uiText[currentLang].rejoin);
+            }
+
+            loadQuiz(selectedGrade);
+            startTimer(remainingSeconds); 
+
+            regSection.classList.remove("active-section");
+            regSection.classList.add("hidden-section");
+            document.querySelector('.lang-switcher').style.display = 'none';
+
+            quizSection.classList.remove("hidden-section");
+            quizSection.classList.add("active-section");
+        })
+        .catch(err => {
+            console.error(err);
+            alert(uiText[currentLang].errorNetwork);
+            submitButton.disabled = false;
+            submitButton.textContent = uiText[currentLang].regBtn;
+        });
+    });
+
+    // === ЗАГРУЗКА ТЕСТА ===
+    function loadQuiz(grade) {
+        quizHeader.textContent = `${uiText[currentLang].quizHeader} ${grade} ${uiText[currentLang].classLabel}`;
+        const questions = questionsDB[currentLang][grade] || [];
+        quizForm.innerHTML = ""; 
+
+        questions.forEach((q, index) => {
+            const questionBlock = document.createElement("div");
+            questionBlock.className = "question-block";
+            
+            const questionText = document.createElement("p");
+            questionText.innerHTML = `${index + 1}. ${q.q}`; 
+            questionBlock.appendChild(questionText);
+
+            q.options.forEach(option => {
+                const label = document.createElement("label");
+                const radio = document.createElement("input");
+                radio.type = "radio";
+                radio.name = `q-${index}`;
+                radio.value = option; 
+                
+                label.appendChild(radio);
+                label.append(` ${option}`); 
+                questionBlock.appendChild(label);
+            });
+            quizForm.appendChild(questionBlock);
+        });
+    }
+
+    // === ОТПРАВКА ОТВЕТОВ ===
+    quizForm.addEventListener("submit", (e) => {
+        e.preventDefault(); 
+        clearInterval(timerInterval); 
+
+        quizSubmitButton.disabled = true;
+        quizSubmitButton.textContent = uiText[currentLang].waitText;
+
+        const userAnswers = [];
+        const questionsCount = questionsDB[currentLang][selectedGrade].length;
+        const formData = new FormData(quizForm);
+
+        for (let i = 0; i < questionsCount; i++) {
+            const ans = formData.get(`q-${i}`);
+            userAnswers.push(ans ? ans : ""); 
+        }
+
+        const dataToSend = {
+            type: 'submit_quiz',
+            ...currentParticipant,
+            userAnswers: userAnswers
+        };
+
+        sendDataWithRetry(dataToSend)
+        .then(serverData => {
+            if (serverData.status === "error") {
+                alert("Server Error: " + serverData.message);
+                quizSubmitButton.disabled = false;
+                quizSubmitButton.textContent = uiText[currentLang].submitQuiz;
+                return;
+            }
+            showResult(serverData.score, serverData.percentage, serverData.passStatus, serverData.total);
+        })
+        .catch(err => {
+            console.error("Ошибка сети:", err);
+            alert(uiText[currentLang].errorNetwork + "\nПожалуйста, нажмите кнопку еще раз.");
+            quizSubmitButton.disabled = false;
+            quizSubmitButton.textContent = uiText[currentLang].submitQuiz;
+        });
+    });
+
+    // === ФИНАЛЬНЫЙ ЭКРАН (ТОЛЬКО БАЛЛЫ + ОБЩЕЕ СООБЩЕНИЕ) ===
+    function showResult(score, percentage, status, totalQuestions) {
+        quizSection.classList.remove("active-section");
+        quizSection.classList.add("hidden-section");
+        resultMessage.innerHTML = ""; 
+
+        // 1. Показываем только баллы (фактический результат)
+        const pScoreTitle = document.createElement("h3");
+        pScoreTitle.textContent = uiText[currentLang].scoreLabel + ` ${percentage}%`;
+        pScoreTitle.style.fontSize = "1.8rem";
+        pScoreTitle.style.color = "#333";
+        pScoreTitle.style.marginBottom = "10px";
+        resultMessage.appendChild(pScoreTitle);
+
+        const pDetail = document.createElement("p");
+        pDetail.style.color = "#777";
+        if(currentLang === 'ru') {
+            pDetail.textContent = `${uiText[currentLang].correctLabel} ${score} из ${totalQuestions}`;
+        } else if(currentLang === 'uz') {
+            pDetail.textContent = `${uiText[currentLang].correctLabel} ${totalQuestions} tadan ${score} ta`;
+        } else {
+            pDetail.textContent = `${uiText[currentLang].correctLabel} ${score} out of ${totalQuestions}`;
+        }
+        resultMessage.appendChild(pDetail);
+
+        // 2. Единое сообщение для всех (без поздравлений или сожалений)
+        const pFinal = document.createElement("p");
+        pFinal.textContent = uiText[currentLang].finalMessage;
+        pFinal.style.fontSize = "1.1rem";
+        pFinal.style.margin = "20px 0";
+        pFinal.style.lineHeight = "1.6";
+        pFinal.style.fontWeight = "bold";
+        pFinal.style.color = "#2c3e50";
+        resultMessage.appendChild(pFinal);
+
+        // 3. Кнопка Телеграм
+        const telegramBtn = document.createElement("a");
+        telegramBtn.href = "https://t.me/mezon_math_2026"; 
+        telegramBtn.target = "_blank"; 
+        telegramBtn.className = "telegram-btn"; // Стиль из CSS
+        telegramBtn.textContent = uiText[currentLang].btnText;
+
+        resultMessage.appendChild(telegramBtn);
+
+        resultSection.classList.remove("hidden-section");
+        resultSection.classList.add("active-section");
+    }
+
+    function startTimer(durationInSeconds) {
+        quizEndTime = Date.now() + durationInSeconds * 1000; 
+
+        timerDisplay.style.display = "block";
+        timerInterval = setInterval(updateTimerDisplay, 1000);
+        updateTimerDisplay(); 
+    }
+
+    function updateTimerDisplay() {
+        const remainingMs = quizEndTime - Date.now();
+        const remainingSeconds = Math.round(remainingMs / 1000);
+
+        if (remainingSeconds <= 0) {
+            clearInterval(timerInterval); 
+            timerDisplay.textContent = "00:00";
+            alert(uiText[currentLang].timeOut);
+            
+            const submitBtn = quizSection.querySelector("button[type='submit']");
+            if (submitBtn && !submitBtn.disabled) {
+                submitBtn.click();
+            }
+            return;
+        }
+
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+        const formattedMinutes = String(minutes).padStart(2, '0');
+        const formattedSeconds = String(seconds).padStart(2, '0');
+
+        timerDisplay.textContent = `${uiText[currentLang].timeLeft} ${formattedMinutes}:${formattedSeconds}`;
+        
+        if (remainingSeconds < 300) { 
+             timerDisplay.style.color = "red";
+        }
+    }
+});
