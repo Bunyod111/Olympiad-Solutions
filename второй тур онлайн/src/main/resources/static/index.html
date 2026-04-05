@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olympiad 2026</title>
+    <link rel="stylesheet" href="style.css">
+
+    <script>
+        window.MathJax = {
+            tex: {
+                // Разрешаем использовать $ для формул внутри строки
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                // Разрешаем $$ для блочных формул
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+<div id="timer-container" class="hidden">
+    <span id="timer-label">Осталось времени:</span>
+    <span id="timer-display">02:00:00</span>
+</div>
+
+<div class="container" id="login-screen">
+    <div class="header">
+        <h1>Регистрация / Ro'yxatdan o'tish / Registration</h1>
+        <p>Заполните данные / Ma'lumotlarni to'ldiring / Fill in the details</p>
+    </div>
+
+    <div class="form-group">
+        <label>Имя (Ism / Name):</label>
+        <input type="text" id="firstName" placeholder="Ivan">
+    </div>
+
+    <div class="form-group">
+        <label>Фамилия (Familiya / Surname):</label>
+        <input type="text" id="lastName" placeholder="Ivanov">
+    </div>
+
+    <div class="form-group">
+        <label>Школа (Maktab / School):</label>
+        <input type="text" id="school" placeholder="№ 145">
+    </div>
+
+    <div class="form-group">
+        <label>Телефон (Telefon / Phone):</label>
+        <input type="text" id="phone" placeholder="+998 90 123 45 67">
+    </div>
+
+    <div class="row">
+        <div class="form-group half">
+            <label>Класс (Sinf / Grade):</label>
+            <select id="grade">
+                <option value="1">1 класс / 1-sinf / Grade 1</option>
+                <option value="2">2 класс / 2-sinf / Grade 2</option>
+                <option value="3">3 класс / 3-sinf / Grade 3</option>
+                <option value="4">4 класс / 4-sinf / Grade 4</option>
+                <option value="5">5 класс / 5-sinf / Grade 5</option>
+                <option value="6">6 класс / 6-sinf / Grade 6</option>
+                <option value="7">7 класс / 7-sinf / Grade 7</option>
+                <option value="8">8 класс / 8-sinf / Grade 8</option>
+            </select>
+        </div>
+        <div class="form-group half">
+            <label>Язык задач (Til / Language):</label>
+            <select id="language">
+                <option value="ru">Русский</option>
+                <option value="uz">O'zbek</option>
+                <option value="en">English</option>
+            </select>
+        </div>
+    </div>
+
+    <button class="start-btn" onclick="startOlympiad()">
+        Начать / Boshlash / Start
+    </button>
+</div>
+
+<div class="container hidden" id="tasks-screen">
+    <div class="header">
+        <h1 id="page-title">Задания</h1>
+        <div class="student-info-display" id="student-info-display"></div>
+    </div>
+
+    <div id="tasks-list">
+    </div>
+</div>
+
+<script>
+    const TASKS_DB = {};
+</script>
+
+<script src="js/tasks_ru.js"></script>
+<script src="js/tasks_uz.js"></script>
+<script src="js/tasks_en.js"></script>
+
+<script>
+    // --- ПЕРЕВОДЫ ИНТЕРФЕЙСА ---
+    const UI_TEXT = {
+        "ru": {
+            title: "Задания Олимпиады",
+            upload: "Прикрепить решение",
+            waiting: "Загрузка...",
+            success: "Принято!",
+            error: "Ошибка",
+            timeUp: "Время вышло! Прием работ окончен.",
+            timerLabel: "Осталось времени:",
+            studentLabel: "Ученик"
+        },
+        "uz": {
+            title: "Olimpiada Topshiriqlari",
+            upload: "Yechimni yuklash",
+            waiting: "Yuklanmoqda...",
+            success: "Qabul qilindi!",
+            error: "Xato",
+            timeUp: "Vaqt tugadi! Ishlarni qabul qilish yakunlandi.",
+            timerLabel: "Qolgan vaqt:",
+            studentLabel: "O'quvchi"
+        },
+        "en": {
+            title: "Olympiad Tasks",
+            upload: "Upload Solution",
+            waiting: "Uploading...",
+            success: "Accepted!",
+            error: "Error",
+            timeUp: "Time is up! Submission closed.",
+            timerLabel: "Time left:",
+            studentLabel: "Student"
+        }
+    };
+
+    // Глобальные переменные
+    let userData = {};
+    let timerInterval;
+
+    // ВРЕМЯ ОЛИМПИАДЫ: 2 ЧАСА (в миллисекундах)
+    const OLYMPIAD_DURATION_MS = 2 * 60 * 60 * 1000;
+
+    // --- ФУНКЦИЯ ЗАПУСКА ---
+    function startOlympiad() {
+        const fName = document.getElementById('firstName').value.trim();
+        const lName = document.getElementById('lastName').value.trim();
+        const school = document.getElementById('school').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const grade = document.getElementById('grade').value;
+        const lang = document.getElementById('language').value;
+
+        if (!fName || !lName || !school || !phone) {
+            alert("Пожалуйста, заполните все поля! / Iltimos, barcha maydonlarni to'ldiring! / Please fill all fields!");
+            return;
+        }
+
+        userData = { fName, lName, school, grade, lang };
+
+        // Сохраняем время окончания, если его еще нет
+        if (!localStorage.getItem('olympiadEndTime')) {
+            const endTime = Date.now() + OLYMPIAD_DURATION_MS;
+            localStorage.setItem('olympiadEndTime', endTime);
+        }
+
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('tasks-screen').classList.remove('hidden');
+        document.getElementById('timer-container').classList.remove('hidden');
+
+        generateTasks(grade, lang);
+        startTimerTicker();
+    }
+
+    // --- ТАЙМЕР ---
+    function startTimerTicker() {
+        const ui = UI_TEXT[userData.lang] || UI_TEXT['en'];
+        document.getElementById('timer-label').innerText = ui.timerLabel;
+
+        timerInterval = setInterval(() => {
+            const endTime = parseInt(localStorage.getItem('olympiadEndTime'));
+            const now = Date.now();
+            const distance = endTime - now;
+
+            if (distance < 0) {
+                clearInterval(timerInterval);
+                document.getElementById('timer-display').innerText = "00:00:00";
+                document.getElementById('timer-container').style.backgroundColor = "#dc3545";
+                disableAllUploads();
+            } else {
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                document.getElementById('timer-display').innerText =
+                    (hours < 10 ? "0" + hours : hours) + ":" +
+                    (minutes < 10 ? "0" + minutes : minutes) + ":" +
+                    (seconds < 10 ? "0" + seconds : seconds);
+            }
+        }, 1000);
+    }
+
+    function disableAllUploads() {
+        const inputs = document.querySelectorAll('input[type="file"]');
+        inputs.forEach(input => {
+            input.disabled = true;
+        });
+    }
+
+    // --- ГЕНЕРАЦИЯ ЗАДАЧ ---
+    function generateTasks(grade, lang) {
+        const key = `${lang}_${grade}`;
+        const tasks = TASKS_DB[key] || [];
+        const ui = UI_TEXT[lang];
+
+        document.getElementById('page-title').innerText = ui.title;
+        document.getElementById('student-info-display').innerText =
+            `${ui.studentLabel}: ${userData.lName} ${userData.fName} (${userData.grade} grade, ${userData.school})`;
+
+        const list = document.getElementById('tasks-list');
+        list.innerHTML = "";
+
+        for (let i = 0; i < 12; i++) {
+            let taskText = "";
+            if (tasks[i]) {
+                taskText = tasks[i];
+            } else {
+                if (lang === 'en') taskText = `Task ${i+1} (Wait for loading...)`;
+                else if (lang === 'uz') taskText = `${i+1}-topshiriq (Yuklanmoqda...)`;
+                else taskText = `Задача ${i+1} (Текст загружается...)`;
+            }
+
+            const taskNum = i + 1;
+            const card = document.createElement('div');
+            card.className = 'task-card';
+            card.innerHTML = `
+                <div class="task-left">
+                    <div class="task-title">№${taskNum}</div>
+                    <div class="task-text">${taskText}</div>
+                </div>
+                <div class="task-right">
+                    <label class="custom-file-upload" for="file-${taskNum}">
+                        ${ui.upload}
+                    </label>
+                    <input id="file-${taskNum}" type="file" onchange="uploadFile(${taskNum}, this)">
+                    <div class="upload-status" id="status-${taskNum}"></div>
+                </div>
+            `;
+            list.appendChild(card);
+        }
+
+        // Обновляем формулы MathJax после вставки HTML
+        if (window.MathJax) {
+            MathJax.typesetPromise();
+        }
+
+        // Проверка таймера при перезагрузке
+        const endTime = parseInt(localStorage.getItem('olympiadEndTime'));
+        if (endTime && Date.now() > endTime) {
+             disableAllUploads();
+             document.getElementById('timer-container').style.backgroundColor = "#dc3545";
+             document.getElementById('timer-display').innerText = "00:00:00";
+        }
+    }
+
+    // --- ОТПРАВКА ФАЙЛА ---
+    async function uploadFile(taskNum, inputElement) {
+        const endTime = parseInt(localStorage.getItem('olympiadEndTime'));
+        if (Date.now() > endTime) {
+            const ui = UI_TEXT[userData.lang] || UI_TEXT['en'];
+            alert(ui.timeUp);
+            inputElement.disabled = true;
+            return;
+        }
+
+        const file = inputElement.files[0];
+        const statusDiv = document.getElementById(`status-${taskNum}`);
+        const ui = UI_TEXT[userData.lang];
+
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("taskNumber", taskNum);
+        formData.append("firstName", userData.fName);
+        formData.append("lastName", userData.lName);
+        formData.append("school", userData.school);
+        formData.append("grade", userData.grade);
+
+        statusDiv.textContent = ui.waiting;
+        statusDiv.className = "upload-status";
+
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                statusDiv.textContent = "✅ " + ui.success;
+                statusDiv.className = "upload-status status-success";
+                inputElement.closest('.task-card').classList.add('completed');
+            } else {
+                statusDiv.textContent = "❌ " + ui.error;
+                statusDiv.className = "upload-status status-error";
+            }
+        } catch (e) {
+            console.error(e);
+            statusDiv.textContent = "Error";
+            statusDiv.className = "upload-status status-error";
+        }
+    }
+</script>
+
+</body>
+</html>
