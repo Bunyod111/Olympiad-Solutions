@@ -16,7 +16,6 @@ import java.time.format.DateTimeFormatter;
 @RequestMapping("/api")
 public class FileUploadController {
 
-    // Папка, куда будут сохраняться работы (создастся в папке проекта)
     private static final String UPLOAD_DIR = "uploaded_solutions";
 
     @PostMapping("/upload")
@@ -33,16 +32,16 @@ public class FileUploadController {
         }
 
         try {
-            // 1. Формируем имя папки: uploads/8_class/Ivanov_Ivan
+         
             String folderName = String.format("%s/%s_class/%s_%s",
                     UPLOAD_DIR, grade, lastName, firstName);
 
             File directory = new File(folderName);
             if (!directory.exists()) {
-                directory.mkdirs(); // Создаем папку, если нет
+                directory.mkdirs(); 
             }
 
-            // 2. Формируем имя файла: Task_1_originalName.jpg
+            
             String originalName = file.getOriginalFilename();
             String fileName = String.format("Task_%s_%s", taskNumber, originalName);
 
